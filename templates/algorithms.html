@@ -1,0 +1,1042 @@
+{% extends "base.html" %}
+
+{% block title %}Algorithms Lab - NexaBank Computer Networks PBL{% endblock %}
+{% block header_title %}Computer Networks Algorithms Laboratory{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Tab Navigation */
+    .algo-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    .algo-tab-btn {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 10px 18px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.88rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: var(--transition);
+    }
+    .algo-tab-btn:hover {
+        background: var(--bg-card-alt);
+        color: var(--text-primary);
+        border-color: var(--border-highlight);
+    }
+    .algo-tab-btn.active {
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(59, 130, 246, 0.15));
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+        box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .tab-pane {
+        display: none;
+    }
+    .tab-pane.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Bus Diagram for CSMA/CD */
+    .bus-container {
+        background: var(--bg-card-alt);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        padding: 24px 20px;
+        margin: 16px 0;
+        position: relative;
+    }
+    .bus-line {
+        height: 8px;
+        background: #334155;
+        border-radius: 4px;
+        margin: 40px 20px;
+        position: relative;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    }
+    .bus-line.BUSY {
+        background: var(--status-moderate);
+        box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+    }
+    .bus-line.COLLISION {
+        background: var(--status-critical);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+        animation: pulseCollision 0.4s infinite alternate;
+    }
+    @keyframes pulseCollision {
+        from { opacity: 0.6; }
+        to { opacity: 1.0; }
+    }
+    .bus-stations-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+    .station-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 12px;
+        text-align: center;
+        transition: var(--transition);
+        position: relative;
+    }
+    .station-box.TRANSMITTING {
+        border-color: var(--status-moderate);
+        box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+    }
+    .station-box.COLLISION {
+        border-color: var(--status-critical);
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+    }
+    .station-box.BACKOFF {
+        border-color: #a855f7;
+    }
+    .station-tap {
+        width: 3px;
+        height: 24px;
+        background: #475569;
+        margin: 0 auto;
+    }
+
+    /* Token Bucket Tank visualizer */
+    .token-tank-container {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        background: var(--bg-card-alt);
+        padding: 20px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-color);
+        margin-bottom: 20px;
+    }
+    .token-tank {
+        width: 140px;
+        height: 180px;
+        border: 3px solid var(--accent-cyan);
+        border-top: none;
+        border-radius: 0 0 14px 14px;
+        position: relative;
+        background: rgba(15, 30, 56, 0.7);
+        overflow: hidden;
+        box-shadow: 0 0 16px rgba(6, 182, 212, 0.15);
+    }
+    .token-tank-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(180deg, #38bdf8, #0284c7);
+        transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.3);
+    }
+
+    .table-custom {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+    .table-custom th {
+        background: var(--bg-card-alt);
+        padding: 10px 12px;
+        text-align: left;
+        color: var(--text-secondary);
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .table-custom td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: var(--text-primary);
+    }
+    .table-custom tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Master Algorithm Lab Notice Banner -->
+<div class="card" style="background: rgba(6, 182, 212, 0.06); border-color: rgba(6, 182, 212, 0.3); margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #ffffff;">
+                    Computer Networks PBL Algorithms Verification Lab
+                </h3>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+                    Active Executing Modules: <strong>TCP Reno</strong> (Layer 4) &bull; <strong>Priority Queue</strong> (Layer 7) &bull; <strong>Token Bucket</strong> (Layer 7) &bull; <strong>CSMA/CD</strong> (Layer 2)
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="badge badge-normal" style="font-size: 0.78rem;">
+                <i class="fa-solid fa-code-compare"></i> Real Algorithm Source Code Executing
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Selection Header -->
+<div class="algo-tabs">
+    <button class="algo-tab-btn active" onclick="switchAlgoTab('tab-reno')">
+        <i class="fa-solid fa-chart-line"></i> 1. TCP Reno Congestion Control
+    </button>
+    <button class="algo-tab-btn" onclick="switchAlgoTab('tab-priority')">
+        <i class="fa-solid fa-layer-group"></i> 2. Priority Queue Scheduler
+    </button>
+    <button class="algo-tab-btn" onclick="switchAlgoTab('tab-token')">
+        <i class="fa-solid fa-filter"></i> 3. Token Bucket Regulator
+    </button>
+    <button class="algo-tab-btn" onclick="switchAlgoTab('tab-csma')">
+        <i class="fa-solid fa-network-wired"></i> 4. CSMA/CD Medium Access
+    </button>
+    <button class="algo-tab-btn" onclick="switchAlgoTab('tab-matrix')">
+        <i class="fa-solid fa-book-open"></i> 5. Algorithm Comparison Matrix
+    </button>
+</div>
+
+<!-- ================================================================= -->
+<!-- TAB 1: TCP RENO CONGESTION CONTROL -->
+<!-- ================================================================= -->
+<div id="tab-reno" class="tab-pane active">
+    <!-- Top Metrics Row -->
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div class="metric-card">
+            <div class="metric-label">TCP State</div>
+            <div class="metric-value" id="reno-state-text" style="color: var(--accent-cyan); font-size: 1.25rem;">SLOW_START</div>
+            <div class="metric-subtext" id="reno-state-sub">Exponential Growth Phase</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Congestion Window (cwnd)</div>
+            <div class="metric-value" id="reno-cwnd-text">2.0</div>
+            <div class="metric-subtext">MSS Segments (1024 B/seg)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Slow Start Thresh (ssthresh)</div>
+            <div class="metric-value" id="reno-ssthresh-text" style="color: var(--status-moderate);">16.0</div>
+            <div class="metric-subtext">MSS Threshold Target</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Modeled Throughput</div>
+            <div class="metric-value" id="reno-throughput-text">327.7</div>
+            <div class="metric-subtext">kbps (at 50ms RTT)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Transmission Round</div>
+            <div class="metric-value" id="reno-round-text">0</div>
+            <div class="metric-subtext">Total Rounds Elapsed</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Loss Events / Retransmits</div>
+            <div class="metric-value" id="reno-loss-text">0 / 0</div>
+            <div class="metric-subtext">Timeouts & 3-Dup-ACKs</div>
+        </div>
+    </div>
+
+    <!-- Reno Interactive Controls -->
+    <div class="card" style="margin-top: 16px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+                <span>TCP Reno Interactive Control Panel & Event Triggers</span>
+            </div>
+            <span style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-muted);">Source: simulation/tcp_reno.py</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary" onclick="stepTCPReno()">
+                <i class="fa-solid fa-forward-step"></i> Step 1 Round (RTT)
+            </button>
+            <button id="btn-reno-auto" class="btn btn-success" onclick="toggleTCPRenoAuto()">
+                <i class="fa-solid fa-play"></i> Auto-Run Simulation
+            </button>
+            <button class="btn btn-warning" onclick="triggerRenoTripleDupAck()" style="background: #ea580c; border-color: #ea580c;">
+                <i class="fa-solid fa-bolt"></i> Trigger 3 Duplicate ACKs (Fast Retransmit)
+            </button>
+            <button class="btn btn-danger" onclick="triggerRenoTimeout()">
+                <i class="fa-solid fa-clock-rotate-left"></i> Trigger Timeout (RTO)
+            </button>
+            <button class="btn btn-outline" onclick="resetTCPReno()" style="color: var(--text-primary); margin-left: auto;">
+                <i class="fa-solid fa-arrows-rotate"></i> Reset Reno
+            </button>
+        </div>
+
+        <!-- Coupling Note -->
+        <div style="margin-top: 14px; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-radius: var(--radius-md); font-size: 0.82rem; color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2);">
+            <i class="fa-solid fa-link"></i> <strong>Simulation Coupling Model:</strong> During the NexaBank traffic surge, queue overflows automatically feedback as packet drops into TCP Reno, driving multiplicative decrease (<code>ssthresh = cwnd/2</code>) and throttling the client's modeled sending rate.
+        </div>
+    </div>
+
+    <!-- Chart: cwnd & ssthresh over time -->
+    <div class="card" style="margin-top: 16px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-chart-line" style="color: var(--accent-cyan);"></i>
+                <span>TCP Reno Congestion Window (cwnd) & ssthresh Over Time</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">AIMD Sawtooth Characteristic</span>
+        </div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="chart-tcp-reno"></canvas>
+        </div>
+    </div>
+
+    <!-- Reno Log & Theory Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-terminal"></i> <span>TCP Reno Execution Trace</span></div>
+            </div>
+            <div class="terminal-window" id="reno-terminal-log" style="height: 200px;">
+                <div class="terminal-line INFO"><span class="terminal-time">[--:--:--]</span> Reno trace loaded.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-square-root-variable" style="color: var(--accent-cyan);"></i> <span>TCP Reno Mathematical Update Rules</span></div>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+                <div><strong style="color: var(--accent-cyan);">Slow Start (cwnd &lt; ssthresh):</strong> <code>cwnd = cwnd * 2</code> per RTT (+1 MSS per ACK).</div>
+                <div><strong style="color: var(--status-moderate);">Congestion Avoidance (cwnd &ge; ssthresh):</strong> Additive Increase: <code>cwnd = cwnd + 1</code> per RTT.</div>
+                <div><strong style="color: #f97316;">3 Duplicate ACKs (Fast Recovery):</strong> <code>ssthresh = max(2, cwnd/2)</code>, <code>cwnd = ssthresh + 3</code>.</div>
+                <div><strong style="color: var(--status-critical);">Timeout Event (RTO):</strong> Severe loss: <code>ssthresh = max(2, cwnd/2)</code>, <code>cwnd = 1.0</code>, reset to Slow Start.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- TAB 2: PRIORITY QUEUE SCHEDULER -->
+<!-- ================================================================= -->
+<div id="tab-priority" class="tab-pane">
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div class="metric-card">
+            <div class="metric-label">Current Queue Length</div>
+            <div class="metric-value" id="pq-current-len" style="color: var(--status-moderate);">0</div>
+            <div class="metric-subtext">Max Capacity: 40 requests</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">High Priority Completed</div>
+            <div class="metric-value" id="pq-completed-high" style="color: var(--status-normal);">0</div>
+            <div class="metric-subtext">Priority 1 (Transfers / Auth)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Medium Priority Completed</div>
+            <div class="metric-value" id="pq-completed-medium">0</div>
+            <div class="metric-subtext">Priority 2 (Balance Inquiries)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Low Priority Completed</div>
+            <div class="metric-value" id="pq-completed-low">0</div>
+            <div class="metric-subtext">Priority 3 (Statements / Batch)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Avg Queue Waiting Time</div>
+            <div class="metric-value" id="pq-avg-wait">0.0 ms</div>
+            <div class="metric-subtext">Time in buffer before service</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Max Observed Queue</div>
+            <div class="metric-value" id="pq-max-observed">0</div>
+            <div class="metric-subtext">Peak Buffer Depth / 40</div>
+        </div>
+    </div>
+
+    <!-- Active Priority Queue Table -->
+    <div class="card" style="margin-top: 16px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-layer-group" style="color: var(--status-moderate);"></i>
+                <span>Live Priority Request Buffer & Dispatcher</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline" onclick="clearPriorityQueue()" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    <i class="fa-solid fa-trash"></i> Clear Queue
+                </button>
+            </div>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 14px;">
+            <strong>Selection Rule:</strong> Strict Priority Order (<code>HIGH</code> &gt; <code>MEDIUM</code> &gt; <code>LOW</code>). Within equal priority tiers, requests are dispatched in arrival order (<strong>FIFO Tie-Breaking</strong>).
+        </p>
+
+        <div style="overflow-x: auto;">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Type</th>
+                        <th>Priority Tier</th>
+                        <th>Arrival Time</th>
+                        <th>Status</th>
+                        <th>Queue Wait Time</th>
+                        <th>Service Latency</th>
+                    </tr>
+                </thead>
+                <tbody id="pq-active-table-body">
+                    <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Queue is currently empty. Start traffic simulator to inject requests.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Priority Queue Explanation Card -->
+    <div class="card" style="margin-top: 16px; background: var(--bg-card-alt);">
+        <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+            <i class="fa-solid fa-graduation-cap"></i> Scheduling Policy & Starvation Characteristic
+        </h4>
+        <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5;">
+            In high-volume banking systems, financial transfers and user wire authorizations must never be blocked by background non-urgent batch tasks (e.g. statement downloads). NexaBank implements a 3-tier priority scheduler. <strong>Note on Starvation:</strong> Under sustained extreme High Priority load, lower priority requests remain buffered; NexaBank rate limits synthetic load to ensure queue draining within bounded limits.
+        </p>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- TAB 3: TOKEN BUCKET REGULATOR -->
+<!-- ================================================================= -->
+<div id="tab-token" class="tab-pane">
+    <div class="token-tank-container">
+        <!-- Animated Tank -->
+        <div class="token-tank">
+            <div id="tb-tank-fill" class="token-tank-fill" style="height: 100%;"></div>
+            <div style="position: absolute; top: 10px; left: 0; right: 0; text-align: center; font-size: 0.72rem; font-family: var(--font-mono); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+                TOKEN TANK
+            </div>
+        </div>
+
+        <div style="flex: 1;">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Token Bucket Traffic Shaper</div>
+            <h3 style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 2px;">
+                <span id="tb-tokens-count" style="color: var(--accent-cyan); font-family: var(--font-mono);">30.0</span> / <span id="tb-capacity-text">30</span> Tokens
+            </h3>
+            <div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 4px;">
+                Refill Rate: <strong id="tb-refill-rate-text" style="color: var(--status-normal); font-family: var(--font-mono);">10.0 tokens/sec</strong> &bull; Fill: <span id="tb-fill-pct">100%</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+                <button class="btn btn-outline" onclick="configureTokenBucket(30, 10)" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    Preset: Default (30 Tok / 10 r/s)
+                </button>
+                <button class="btn btn-outline" onclick="configureTokenBucket(15, 5)" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    Preset: Strict (15 Tok / 5 r/s)
+                </button>
+                <button class="btn btn-outline" onclick="configureTokenBucket(50, 20)" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    Preset: High Burst (50 Tok / 20 r/s)
+                </button>
+                <button class="btn btn-outline" onclick="resetTokenBucket()" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    <i class="fa-solid fa-arrows-rotate"></i> Reset Bucket
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="metric-card">
+            <div class="metric-label">Total Admitted Requests</div>
+            <div class="metric-value" id="tb-total-admitted" style="color: var(--status-normal);">0</div>
+            <div class="metric-subtext">Sufficient tokens available</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Rejected (HTTP 429)</div>
+            <div class="metric-value" id="tb-total-rejected" style="color: var(--status-critical);">0</div>
+            <div class="metric-subtext">Token exhaustion load-shedding</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Tokens Consumed</div>
+            <div class="metric-value" id="tb-tokens-consumed">0</div>
+            <div class="metric-subtext">1 Token per Standard Request</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Server Capacity vs Refill</div>
+            <div class="metric-value" style="color: var(--accent-cyan); font-size: 1.25rem;">20 req/s vs 10 tok/s</div>
+            <div class="metric-subtext">Independent Configured Parameters</div>
+        </div>
+    </div>
+
+    <!-- Chart: Token Bucket History -->
+    <div class="card" style="margin-top: 16px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-chart-line" style="color: var(--accent-cyan);"></i>
+                <span>Token Bucket State Over Time</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">Tokens vs Capacity</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="chart-token-bucket"></canvas>
+        </div>
+    </div>
+
+    <!-- Token Bucket Log & Theory Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-terminal"></i> <span>Token Bucket Event Trace</span></div>
+            </div>
+            <div class="terminal-window" id="tb-terminal-log" style="height: 180px;">
+                <div class="terminal-line INFO"><span class="terminal-time">[--:--:--]</span> Token bucket audit stream active.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-book-open" style="color: var(--accent-cyan);"></i> <span>Token Bucket vs Leaky Bucket (Viva Guide)</span></div>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">
+                <p style="margin-bottom: 8px;"><strong>Token Bucket:</strong> Tokens accumulate up to capacity <code>B</code>. Allows <em>bursts</em> of up to <code>B</code> requests instantly, then enforces a steady average rate <code>R</code>.</p>
+                <p><strong>Leaky Bucket:</strong> Drops excess burst instantly, enforcing a strict constant outflow rate without burst allowance.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- TAB 4: CSMA/CD MEDIUM ACCESS SIMULATION -->
+<!-- ================================================================= -->
+<div id="tab-csma" class="tab-pane">
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div class="metric-card">
+            <div class="metric-label">Shared Channel State</div>
+            <div class="metric-value" id="csma-channel-state" style="color: var(--status-normal); font-size: 1.25rem;">IDLE</div>
+            <div class="metric-subtext" id="csma-channel-sub">Bus is Clear (No Carrier)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Simulation Slot Number</div>
+            <div class="metric-value" id="csma-slot-num">0</div>
+            <div class="metric-subtext">51.2 &mu;s Standard Slot Time</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Successful Transmissions</div>
+            <div class="metric-value" id="csma-success-count" style="color: var(--status-normal);">0</div>
+            <div class="metric-subtext">Frames transmitted without collision</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Collisions Detected</div>
+            <div class="metric-value" id="csma-collision-count" style="color: var(--status-critical);">0</div>
+            <div class="metric-subtext">Simultaneous slot transmissions</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Retransmissions Scheduled</div>
+            <div class="metric-value" id="csma-retransmits-count" style="color: var(--status-moderate);">0</div>
+            <div class="metric-subtext">Binary Exponential Backoffs</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Dropped (Retry Limit)</div>
+            <div class="metric-value" id="csma-dropped-count">0</div>
+            <div class="metric-subtext">Limit: 10 consecutive retries</div>
+        </div>
+    </div>
+
+    <!-- CSMA/CD Bus Visualizer -->
+    <div class="bus-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.88rem; font-weight: 700; color: #fff;">
+                <i class="fa-solid fa-ethernet" style="color: var(--accent-cyan);"></i> Shared Half-Duplex Ethernet Bus Topology (10BASE5 Coaxial Cable)
+            </div>
+            <span id="csma-channel-pill" class="badge badge-normal">CHANNEL: IDLE</span>
+        </div>
+
+        <!-- 4 Stations -->
+        <div class="bus-stations-grid" id="csma-stations-container">
+            <!-- Rendered dynamically by JS -->
+        </div>
+
+        <!-- Coaxial Bus Line -->
+        <div id="csma-bus-line" class="bus-line IDLE"></div>
+    </div>
+
+    <!-- Controls Row -->
+    <div class="card" style="margin-top: 16px;">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-gamepad" style="color: var(--accent-cyan);"></i>
+                <span>CSMA/CD Interactive Medium Access Controls</span>
+            </div>
+            <span style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-muted);">Source: simulation/csma_cd.py</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary" onclick="stepCSMACD()">
+                <i class="fa-solid fa-forward-step"></i> Step 1 Slot
+            </button>
+            <button id="btn-csma-auto" class="btn btn-success" onclick="toggleCSMAAuto()">
+                <i class="fa-solid fa-play"></i> Auto-Run Slots
+            </button>
+            <button class="btn btn-danger" onclick="triggerCSMACollisionDemo()">
+                <i class="fa-solid fa-burst"></i> Inject Simultaneous Collision (STA-A & STA-B)
+            </button>
+            <button class="btn btn-outline" onclick="injectCSMAFrame('STA-A')" style="color: var(--text-primary);">
+                +1 Frame to STA-A
+            </button>
+            <button class="btn btn-outline" onclick="injectCSMAFrame('STA-C')" style="color: var(--text-primary);">
+                +1 Frame to STA-C
+            </button>
+            <button class="btn btn-outline" onclick="resetCSMACD()" style="color: var(--text-primary); margin-left: auto;">
+                <i class="fa-solid fa-arrows-rotate"></i> Reset CSMA/CD
+            </button>
+        </div>
+    </div>
+
+    <!-- Binary Exponential Backoff Table & Live Log -->
+    <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-calculator" style="color: var(--accent-cyan);"></i> <span>Binary Exponential Backoff (BEB) Trace</span></div>
+            </div>
+            <div style="overflow-x: auto; max-height: 220px;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Slot</th>
+                            <th>Station</th>
+                            <th>Collision k</th>
+                            <th>Contention Window [0..2^k-1]</th>
+                            <th>Selected Backoff Slot r</th>
+                        </tr>
+                    </thead>
+                    <tbody id="csma-beb-table-body">
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No collisions logged yet. Trigger collision demo to view backoff calculations.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-terminal"></i> <span>CSMA/CD Channel Event Trace</span></div>
+            </div>
+            <div class="terminal-window" id="csma-terminal-log" style="height: 220px;">
+                <div class="terminal-line INFO"><span class="terminal-time">[--:--:--]</span> CSMA/CD channel monitor active.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- TAB 5: ALGORITHM COMPARISON MATRIX -->
+<!-- ================================================================= -->
+<div id="tab-matrix" class="tab-pane">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-table-list" style="color: var(--accent-cyan);"></i>
+                <span>Computer Networks PBL Algorithms Master Summary Matrix</span>
+            </div>
+            <span class="badge badge-normal">Full Academic Specification</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="table-custom" style="font-size: 0.88rem;">
+                <thead>
+                    <tr>
+                        <th>Algorithm Name</th>
+                        <th>OSI Layer</th>
+                        <th>Source File</th>
+                        <th>Core Function / Role</th>
+                        <th>Key Mathematical Rule / Formula</th>
+                        <th>Observed Project Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color: var(--accent-cyan);">TCP Reno</strong></td>
+                        <td>Layer 4 (Transport)</td>
+                        <td><code>simulation/tcp_reno.py</code></td>
+                        <td>End-to-end transport congestion control</td>
+                        <td><code>Slow Start: cwnd *= 2</code><br><code>Congestion Avoidance: cwnd += 1</code><br><code>Fast Recovery: ssthresh = cwnd/2</code></td>
+                        <td>Modulates client request burst size; reduces sending window upon packet drops</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--status-moderate);">Priority Queue Scheduling</strong></td>
+                        <td>Layer 7 (Application)</td>
+                        <td><code>simulation/request_queue.py</code></td>
+                        <td>Prioritizes high-value banking transfers over inquiries</td>
+                        <td>Strict Priority (HIGH &gt; MED &gt; LOW)<br>FIFO Tie-Breaking for equal priority</td>
+                        <td>Preserves customer transfer throughput during heavy load while buffering inquiries</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: #38bdf8;">Token Bucket</strong></td>
+                        <td>Layer 7 (Traffic Shaper)</td>
+                        <td><code>simulation/token_bucket.py</code></td>
+                        <td>Regulates request admission according to token availability</td>
+                        <td><code>tokens = min(Cap, tokens + elapsed * Rate)</code><br>Cost: 1 token per request</td>
+                        <td>Absorbs short bursts up to capacity 30, then bounds sustained rate to 10 req/s</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--status-critical);">CSMA/CD with BEB</strong></td>
+                        <td>Layer 2 (Data Link)</td>
+                        <td><code>simulation/csma_cd.py</code></td>
+                        <td>Arbitrates access on shared half-duplex Ethernet medium</td>
+                        <td>Carrier Sense (1-Persistent)<br>BEB: <code>r &isin; [0, 2^min(k,10) - 1]</code></td>
+                        <td>Simulates collision detection, jam signal, and randomized retransmission slots</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let chartTCPReno = null;
+    let chartTokenBucket = null;
+    let renoAutoRunning = false;
+    let csmaAutoRunning = false;
+
+    function switchAlgoTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.algo-tab-btn').forEach(el => el.classList.remove('active'));
+        
+        const targetPane = document.getElementById(tabId);
+        if (targetPane) targetPane.classList.add('active');
+
+        event.currentTarget.classList.add('active');
+
+        if (tabId === 'tab-reno' && chartTCPReno) {
+            chartTCPReno.resize();
+        } else if (tabId === 'tab-token' && chartTokenBucket) {
+            chartTokenBucket.resize();
+        }
+    }
+
+    // Initialize Charts for Algorithms Lab
+    function initAlgoCharts() {
+        const ctxReno = document.getElementById('chart-tcp-reno')?.getContext('2d');
+        if (ctxReno) {
+            chartTCPReno = new Chart(ctxReno, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Congestion Window (cwnd MSS)',
+                            data: [],
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                            borderWidth: 2.2,
+                            tension: 0.2,
+                            fill: true,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'ssthresh (Threshold MSS)',
+                            data: [],
+                            borderColor: '#f59e0b',
+                            borderWidth: 1.8,
+                            borderDash: [5, 5],
+                            tension: 0,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                        y: { beginAtZero: true, suggestedMax: 35, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94a3b8' } } }
+                }
+            });
+        }
+
+        const ctxTB = document.getElementById('chart-token-bucket')?.getContext('2d');
+        if (ctxTB) {
+            chartTokenBucket = new Chart(ctxTB, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Tokens Available',
+                            data: [],
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            fill: true,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Bucket Capacity',
+                            data: [],
+                            borderColor: '#10b981',
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                        y: { beginAtZero: true, suggestedMax: 35, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94a3b8' } } }
+                }
+            });
+        }
+    }
+
+    // Polling & UI Update for Algorithms Lab
+    async function pollAlgorithmsLab() {
+        try {
+            const resp = await fetch('/api/algorithms/summary');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            // 1. Update TCP Reno UI
+            updateTCPRenoUI(data.tcp_reno);
+
+            // 2. Update Priority Queue UI
+            updatePriorityQueueUI(data.priority_queue);
+
+            // 3. Update Token Bucket UI
+            updateTokenBucketUI(data.token_bucket);
+
+            // 4. Update CSMA/CD UI
+            updateCSMACDUI(data.csma_cd);
+
+        } catch (err) {
+            console.warn('Algo lab polling error:', err);
+        }
+    }
+
+    function updateTCPRenoUI(reno) {
+        if (!reno) return;
+        document.getElementById('reno-state-text').textContent = reno.state;
+        document.getElementById('reno-cwnd-text').textContent = reno.cwnd.toFixed(1);
+        document.getElementById('reno-ssthresh-text').textContent = reno.ssthresh.toFixed(1);
+        document.getElementById('reno-throughput-text').textContent = `${reno.throughput_estimate_kbps} kbps`;
+        document.getElementById('reno-round-text').textContent = reno.round;
+        document.getElementById('reno-loss-text').textContent = `${reno.total_loss_events} / ${reno.total_retransmissions}`;
+
+        const stateSub = document.getElementById('reno-state-sub');
+        if (reno.state === 'SLOW_START') stateSub.textContent = 'Exponential Growth Phase';
+        else if (reno.state === 'CONGESTION_AVOIDANCE') stateSub.textContent = 'AIMD Linear Growth Phase';
+        else stateSub.textContent = 'Fast Recovery Inflated Phase';
+
+        // Update Chart
+        if (chartTCPReno && reno.history) {
+            chartTCPReno.data.labels = reno.history.map(h => `R${h.round}`);
+            chartTCPReno.data.datasets[0].data = reno.history.map(h => h.cwnd);
+            chartTCPReno.data.datasets[1].data = reno.history.map(h => h.ssthresh);
+            chartTCPReno.update('none');
+        }
+
+        // Update Log
+        renderLogs('reno-terminal-log', reno.event_logs);
+    }
+
+    function updatePriorityQueueUI(pq) {
+        if (!pq) return;
+        document.getElementById('pq-current-len').textContent = `${pq.total_size} / ${pq.max_capacity}`;
+        document.getElementById('pq-completed-high').textContent = pq.completed_high;
+        document.getElementById('pq-completed-medium').textContent = pq.completed_medium;
+        document.getElementById('pq-completed-low').textContent = pq.completed_low;
+        document.getElementById('pq-avg-wait').textContent = `${pq.avg_waiting_time_ms} ms`;
+        document.getElementById('pq-max-observed').textContent = `${pq.max_observed_queue} items`;
+
+        // Render Active Table
+        const tbody = document.getElementById('pq-active-table-body');
+        if (tbody) {
+            const allItems = [...(pq.active_items || []), ...(pq.completed_items || [])].slice(0, 8);
+            if (allItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Queue buffer is currently empty.</td></tr>';
+            } else {
+                tbody.innerHTML = allItems.map(item => {
+                    const badgeClass = item.priority === 1 ? 'badge-critical' : (item.priority === 2 ? 'badge-moderate' : 'badge-normal');
+                    return `
+                        <tr>
+                            <td style="font-family: var(--font-mono); font-weight: 700;">${item.request_id}</td>
+                            <td>${item.request_type}</td>
+                            <td><span class="badge ${badgeClass}">${item.priority_label}</span></td>
+                            <td>${item.arrival_time}</td>
+                            <td><strong>${item.status}</strong></td>
+                            <td>${item.wait_time_ms} ms</td>
+                            <td>${item.service_time_ms} ms</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+    }
+
+    function updateTokenBucketUI(tb) {
+        if (!tb) return;
+        document.getElementById('tb-tokens-count').textContent = tb.tokens.toFixed(1);
+        document.getElementById('tb-capacity-text').textContent = tb.capacity;
+        document.getElementById('tb-refill-rate-text').textContent = `${tb.refill_rate} tokens/sec`;
+        document.getElementById('tb-fill-pct').textContent = `${tb.fill_percentage}%`;
+        document.getElementById('tb-total-admitted').textContent = tb.total_admitted;
+        document.getElementById('tb-total-rejected').textContent = tb.total_rejected;
+        document.getElementById('tb-tokens-consumed').textContent = tb.total_tokens_consumed;
+
+        const tankFill = document.getElementById('tb-tank-fill');
+        if (tankFill) {
+            tankFill.style.height = `${tb.fill_percentage}%`;
+        }
+
+        if (chartTokenBucket && tb.history) {
+            chartTokenBucket.data.labels = tb.history.map(h => h.time);
+            chartTokenBucket.data.datasets[0].data = tb.history.map(h => h.tokens);
+            chartTokenBucket.data.datasets[1].data = tb.history.map(h => h.capacity);
+            chartTokenBucket.update('none');
+        }
+
+        renderLogs('tb-terminal-log', tb.event_logs);
+    }
+
+    function updateCSMACDUI(csma) {
+        if (!csma) return;
+        document.getElementById('csma-channel-state').textContent = csma.channel_state;
+        document.getElementById('csma-channel-state').style.color = csma.channel_state === 'IDLE' ? 'var(--status-normal)' : (csma.channel_state === 'BUSY' ? 'var(--status-moderate)' : 'var(--status-critical)');
+        document.getElementById('csma-slot-num').textContent = csma.slot_number;
+        document.getElementById('csma-success-count').textContent = csma.successful_transmissions;
+        document.getElementById('csma-collision-count').textContent = csma.total_collisions;
+        document.getElementById('csma-retransmits-count').textContent = csma.total_retransmissions;
+        document.getElementById('csma-dropped-count').textContent = csma.total_dropped_frames;
+
+        const busLine = document.getElementById('csma-bus-line');
+        if (busLine) {
+            busLine.className = `bus-line ${csma.channel_state}`;
+        }
+        const channelPill = document.getElementById('csma-channel-pill');
+        if (channelPill) {
+            channelPill.textContent = `CHANNEL: ${csma.channel_state}`;
+            channelPill.className = `badge badge-${csma.channel_state === 'IDLE' ? 'normal' : (csma.channel_state === 'BUSY' ? 'moderate' : 'critical')}`;
+        }
+
+        // Render Stations
+        const staContainer = document.getElementById('csma-stations-container');
+        if (staContainer && csma.stations) {
+            staContainer.innerHTML = csma.stations.map(sta => {
+                const isTransmitting = csma.transmitting_stations.includes(sta.station_id);
+                return `
+                    <div class="station-box ${sta.state} ${isTransmitting ? 'TRANSMITTING' : ''}">
+                        <div style="font-weight: 700; color: #fff; font-size: 0.88rem;">${sta.station_id}</div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary);">${sta.name}</div>
+                        <div style="margin-top: 6px;">
+                            <span class="badge ${sta.state === 'IDLE' ? 'badge-normal' : (sta.state === 'BACKOFF' ? 'badge-moderate' : 'badge-critical')}" style="font-size: 0.7rem;">
+                                ${sta.state}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.75rem; margin-top: 6px; color: var(--text-muted);">
+                            Queue: <strong style="color: #fff;">${sta.frames_queued}</strong> &bull; Sent: <strong style="color: var(--status-normal);">${sta.total_transmitted}</strong>
+                        </div>
+                        ${sta.state === 'BACKOFF' ? `<div style="font-size: 0.72rem; color: #c084fc; margin-top: 4px;">Backoff: ${sta.backoff_slots_remaining} slot(s)</div>` : ''}
+                        <div class="station-tap"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render BEB Table
+        const bebBody = document.getElementById('csma-beb-table-body');
+        if (bebBody && csma.backoff_history) {
+            if (csma.backoff_history.length === 0) {
+                bebBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No collisions logged yet.</td></tr>';
+            } else {
+                bebBody.innerHTML = csma.backoff_history.slice(0, 6).map(h => `
+                    <tr>
+                        <td style="font-family: var(--font-mono);">Slot ${h.slot}</td>
+                        <td><strong>${h.station_id}</strong></td>
+                        <td>k = ${h.retry_k}</td>
+                        <td><code>${h.formula}</code></td>
+                        <td><strong style="color: #a855f7;">r = ${h.backoff_selected} slots</strong></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        renderLogs('csma-terminal-log', csma.event_logs);
+    }
+
+    function renderLogs(terminalId, logs) {
+        const terminal = document.getElementById(terminalId);
+        if (!terminal || !logs || logs.length === 0) return;
+        terminal.innerHTML = logs.map(item => `
+            <div class="terminal-line ${item.level}">
+                <span class="terminal-time">[${item.time}]</span>
+                <span class="terminal-msg">${item.message}</span>
+            </div>
+        `).join('');
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // --- API Action Functions ---
+    function stepTCPReno() { fetch('/api/algorithms/tcp-reno/step', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+    function toggleTCPRenoAuto() {
+        const btn = document.getElementById('btn-reno-auto');
+        renoAutoRunning = !renoAutoRunning;
+        const endpoint = renoAutoRunning ? '/api/algorithms/tcp-reno/start' : '/api/algorithms/tcp-reno/stop';
+        btn.innerHTML = renoAutoRunning ? '<i class="fa-solid fa-pause"></i> Pause Auto-Run' : '<i class="fa-solid fa-play"></i> Auto-Run Simulation';
+        btn.className = renoAutoRunning ? 'btn btn-warning' : 'btn btn-success';
+        fetch(endpoint, { method: 'POST' });
+    }
+    function triggerRenoTripleDupAck() { fetch('/api/algorithms/tcp-reno/triple-dup-ack', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+    function triggerRenoTimeout() { fetch('/api/algorithms/tcp-reno/timeout', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+    function resetTCPReno() { fetch('/api/algorithms/tcp-reno/reset', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+
+    function clearPriorityQueue() { fetch('/api/algorithms/priority-queue/clear', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+
+    function configureTokenBucket(capacity, refillRate) {
+        fetch('/api/algorithms/token-bucket/configure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ capacity: capacity, refill_rate: refillRate })
+        }).then(() => pollAlgorithmsLab());
+    }
+    function resetTokenBucket() { fetch('/api/algorithms/token-bucket/reset', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+
+    function stepCSMACD() { fetch('/api/algorithms/csma-cd/step', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+    function toggleCSMAAuto() {
+        const btn = document.getElementById('btn-csma-auto');
+        csmaAutoRunning = !csmaAutoRunning;
+        const endpoint = csmaAutoRunning ? '/api/algorithms/csma-cd/start' : '/api/algorithms/csma-cd/stop';
+        btn.innerHTML = csmaAutoRunning ? '<i class="fa-solid fa-pause"></i> Pause Auto-Slots' : '<i class="fa-solid fa-play"></i> Auto-Run Slots';
+        btn.className = csmaAutoRunning ? 'btn btn-warning' : 'btn btn-success';
+        fetch(endpoint, { method: 'POST' });
+    }
+    function triggerCSMACollisionDemo() { fetch('/api/algorithms/csma-cd/collision-demo', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+    function injectCSMAFrame(stationId) {
+        fetch('/api/algorithms/csma-cd/inject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ station_id: stationId, count: 1 })
+        }).then(() => pollAlgorithmsLab());
+    }
+    function resetCSMACD() { fetch('/api/algorithms/csma-cd/reset', { method: 'POST' }).then(() => pollAlgorithmsLab()); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initAlgoCharts();
+        pollAlgorithmsLab();
+        setInterval(pollAlgorithmsLab, 1000);
+    });
+</script>
+{% endblock %}

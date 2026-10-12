@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Simulated Transfer - NexaBank{% endblock %}
+{% block header_title %}Transfer Money & Priority Queue Simulator{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px;">
+    <!-- Transfer Form Card -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-paper-plane" style="color: var(--accent-cyan);"></i>
+                <span>Simulated Funds Transfer</span>
+            </div>
+            <span class="badge badge-normal" id="transfer-live-status">NETWORK: NORMAL</span>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+            Submit a simulated customer wire transfer. Your request is tagged with <strong>Priority 1 (High)</strong> and dispatched into the congestion control pipeline for admission, priority queuing, and latency shaping.
+        </p>
+
+        <form id="transfer-form">
+            <div class="form-group">
+                <label class="form-label" for="recipient">Recipient Full Name</label>
+                <input type="text" id="recipient" class="form-control" placeholder="e.g., Dr. Rajesh Sharma" value="Dr. Rajesh Sharma" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="account_dest">Recipient Account / IFSC</label>
+                <input type="text" id="account_dest" class="form-control" placeholder="e.g., HDFC0002819" value="HDFC0002819" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="amount">Transfer Amount (₹)</label>
+                <input type="number" id="amount" class="form-control" placeholder="e.g., 5000" min="1" step="0.01" value="5000" required>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                    Available balance: ₹{{ "{:,.2f}".format(user.balance) }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="description">Transaction Remark / Description</label>
+                <input type="text" id="description" class="form-control" placeholder="e.g., Tuition Fee / Research Materials" value="PBL Academic Project Demonstration">
+            </div>
+
+            <div style="margin-top: 24px;">
+                <button type="submit" id="btn-submit-transfer" class="btn btn-primary" style="width: 100%; padding: 13px;">
+                    <i class="fa-solid fa-lock"></i> Authorize & Dispatch Request
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Live Execution Feedback & Architecture Routing Card -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card" id="transfer-result-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-microchip" style="color: var(--accent-cyan);"></i>
+                    <span>Congestion Pipeline Dispatch Result</span>
+                </div>
+            </div>
+
+            <div id="transfer-feedback-placeholder" style="text-align: center; padding: 30px 10px; color: var(--text-muted);">
+                <i class="fa-solid fa-arrows-split-up-and-left" style="font-size: 2.2rem; margin-bottom: 12px; color: var(--border-highlight);"></i>
+                <p style="font-size: 0.88rem;">No transfer dispatched yet in this session.</p>
+                <p style="font-size: 0.78rem; margin-top: 6px;">Click "Authorize & Dispatch Request" to observe real-time queue insertion and response time calculations.</p>
+            </div>
+
+            <div id="transfer-feedback-content" style="display: none;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="feedback-status-icon" style="font-size: 2.4rem; margin-bottom: 8px;"></div>
+                    <h3 id="feedback-status-heading" style="font-size: 1.3rem; font-weight: 700;"></h3>
+                    <div id="feedback-status-badge" style="margin-top: 6px;"></div>
+                </div>
+
+                <div style="background: var(--bg-card-alt); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Transaction Code:</span>
+                        <span id="fb-tx-code" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Recipient:</span>
+                        <span id="fb-recipient" style="font-weight: 600;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Amount:</span>
+                        <span id="fb-amount" style="font-family: var(--font-mono); font-weight: 600;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Processing Latency:</span>
+                        <span id="fb-latency" style="font-family: var(--font-mono); font-weight: 700;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Queue Priority Assigned:</span>
+                        <span style="color: var(--status-normal); font-weight: 700;">Priority 1 (Customer High)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Network State at Execution:</span>
+                        <span id="fb-network-state" style="font-weight: 600;"></span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 14px; text-align: center;">
+                    <a href="{{ url_for('transactions') }}" class="btn btn-outline" style="font-size: 0.82rem; width: 100%;">
+                        <i class="fa-solid fa-list-check"></i> View in Transaction Ledger
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Queuing Educational Card -->
+        <div class="card" style="background: rgba(6, 182, 212, 0.04); border-color: rgba(6, 182, 212, 0.25);">
+            <div class="card-title" style="font-size: 0.95rem; margin-bottom: 10px;">
+                <i class="fa-solid fa-lightbulb" style="color: var(--accent-cyan);"></i>
+                <span>How Application Congestion Control Treats Transfers</span>
+            </div>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">
+                In online banking architectures, financial transactions (money transfers, card authorization) are assigned <strong>Priority 1</strong> over read-only synthetic queries (balance checks, mini-statements).
+            </p>
+            <ul style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px;">
+                <li><strong>Normal Traffic:</strong> Immediate execution (~40-70ms) with zero queue wait.</li>
+                <li><strong>Moderate Congestion:</strong> Admitted into priority queue, bypassing low-priority inquiries.</li>
+                <li><strong>Severe Congestion:</strong> Low-priority requests are load-shed/dropped by the rate limiter, giving your transfer server resources.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('transfer-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btn-submit-transfer');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Disagreeing load & processing...';
+
+        const payload = {
+            recipient: document.getElementById('recipient').value,
+            account_dest: document.getElementById('account_dest').value,
+            amount: document.getElementById('amount').value,
+            description: document.getElementById('description').value
+        };
+
+        try {
+            const resp = await fetch('/api/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            document.getElementById('transfer-feedback-placeholder').style.display = 'none';
+            const feedbackContent = document.getElementById('transfer-feedback-content');
+            feedbackContent.style.display = 'block';
+
+            const iconEl = document.getElementById('feedback-status-icon');
+            const headingEl = document.getElementById('feedback-status-heading');
+            const badgeEl = document.getElementById('feedback-status-badge');
+
+            if (data.success) {
+                if (data.status === 'Completed') {
+                    iconEl.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--status-normal);"></i>';
+                    headingEl.textContent = 'Transfer Executed Successfully';
+                    headingEl.style.color = 'var(--status-normal)';
+                    badgeEl.innerHTML = '<span class="badge badge-normal">Status: Completed</span>';
+                } else {
+                    iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--status-moderate);"></i>';
+                    headingEl.textContent = 'Transfer Processed with Latency';
+                    headingEl.style.color = 'var(--status-moderate)';
+                    badgeEl.innerHTML = '<span class="badge badge-moderate">Status: Delayed in Queue</span>';
+                }
+
+                document.getElementById('fb-tx-code').textContent = data.tx_code;
+                document.getElementById('fb-recipient').textContent = data.recipient;
+                document.getElementById('fb-amount').textContent = '₹' + parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                document.getElementById('fb-latency').textContent = data.processing_time_ms + ' ms';
+                document.getElementById('fb-network-state').textContent = data.network_status;
+            } else {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color: var(--status-critical);"></i>';
+                headingEl.textContent = 'Transfer Dropped / Rejected';
+                headingEl.style.color = 'var(--status-critical)';
+                badgeEl.innerHTML = '<span class="badge badge-critical">Rate Limiter Shed Load</span>';
+
+                document.getElementById('fb-tx-code').textContent = data.tx_code || 'N/A';
+                document.getElementById('fb-recipient').textContent = payload.recipient;
+                document.getElementById('fb-amount').textContent = '₹' + parseFloat(payload.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                document.getElementById('fb-latency').textContent = (data.processing_time_ms || 3200) + ' ms (Timeout)';
+                document.getElementById('fb-network-state').textContent = data.network_status || 'CRITICAL';
+            }
+        } catch (err) {
+            alert('Communication error with simulation server: ' + err);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Authorize & Dispatch Request';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Network Monitor - NexaBank Academic Simulation{% endblock %}
+{% block header_title %}Real-Time Congestion Monitor & Traffic Simulator{% endblock %}
+
+{% block content %}
+<!-- Full Demonstration Presentation Banner -->
+<div class="demo-banner">
+    <div class="demo-banner-header">
+        <div>
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-cyan); font-weight: 700;">
+                <i class="fa-solid fa-graduation-cap"></i> Examiner Presentation Feature
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-top: 2px;">
+                One-Click Automated Congestion Lifecycle Demo
+            </h3>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">
+                Current Stage: <span id="demo-stage-label" style="font-weight: 700; color: #ffffff; font-family: var(--font-mono);">IDLE (Ready for Demonstration)</span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="btn-run-full-demo" class="btn btn-demo" onclick="runFullDemo()">
+                <i class="fa-solid fa-play"></i> RUN FULL DEMO
+            </button>
+            <button class="btn btn-outline" onclick="stopSimulation()" style="color: var(--text-primary);">
+                <i class="fa-solid fa-stop"></i> Stop
+            </button>
+            <button class="btn btn-outline" onclick="resetSimulation()" style="color: var(--text-primary);">
+                <i class="fa-solid fa-arrows-rotate"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Demo Progress Bar -->
+    <div class="progress-bar-container">
+        <div id="demo-progress-bar" class="progress-bar-fill"></div>
+    </div>
+
+    <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <span>NORMAL &rarr; TRAFFIC INCREASING &rarr; CONGESTION &rarr; RATE LIMITER ACTIVE &rarr; QUEUE GROWTH &rarr; CONTROLLED DRAIN &rarr; RECOVERED</span>
+        <span id="demo-percentage-text">Progress: 0%</span>
+    </div>
+</div>
+
+<!-- Active Algorithms Verification Bar -->
+<div class="card" style="background: rgba(6, 182, 212, 0.05); border-color: rgba(6, 182, 212, 0.25); padding: 14px 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-microchip" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
+            <span style="font-size: 0.88rem; font-weight: 700; color: #ffffff;">Computer Networks Algorithms Integrated:</span>
+            <span class="badge badge-normal" style="font-size: 0.72rem;">TCP Reno</span>
+            <span class="badge badge-normal" style="font-size: 0.72rem;">Priority Queue (FIFO tie)</span>
+            <span class="badge badge-normal" style="font-size: 0.72rem;">Token Bucket</span>
+            <span class="badge badge-normal" style="font-size: 0.72rem;">CSMA/CD</span>
+        </div>
+        <a href="{{ url_for('algorithms') }}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; text-decoration: none;">
+            <i class="fa-solid fa-flask"></i> Open Algorithms Lab &rarr;
+        </a>
+    </div>
+</div>
+
+<!-- Architecture Pipeline Visualization -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-diagram-project" style="color: var(--accent-cyan);"></i>
+            <span>Simulated Application-Level Congestion Control Pipeline</span>
+        </div>
+        <span class="badge badge-normal" id="pipeline-status-badge">FLOW HEALTHY</span>
+    </div>
+
+    <div class="pipeline-container">
+        <div class="pipeline-node active" id="node-user">
+            <div class="node-title"><i class="fa-solid fa-user"></i> User</div>
+            <div class="node-desc">Client Request</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-request">
+            <div class="node-title"><i class="fa-solid fa-paper-plane"></i> Banking Req</div>
+            <div class="node-desc">Transfer / Inquiry</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-monitor">
+            <div class="node-title"><i class="fa-solid fa-gauge-high"></i> Traffic Monitor</div>
+            <div class="node-desc">Rate Measurement</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-detector">
+            <div class="node-title"><i class="fa-solid fa-radar"></i> Congestion Detector</div>
+            <div class="node-desc">Threshold Eval</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-limiter">
+            <div class="node-title"><i class="fa-solid fa-shield-halved"></i> Rate Limiter</div>
+            <div class="node-desc">Admission / Shed</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-queue">
+            <div class="node-title"><i class="fa-solid fa-layer-group"></i> Request Queue</div>
+            <div class="node-desc">Priority Buffer (40)</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-server">
+            <div class="node-title"><i class="fa-solid fa-server"></i> Server Engine</div>
+            <div class="node-desc">Cap: 20 req/s</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+
+        <div class="pipeline-node" id="node-response">
+            <div class="node-title"><i class="fa-solid fa-circle-check"></i> Response</div>
+            <div class="node-desc">Simulated ACK</div>
+        </div>
+    </div>
+</div>
+
+<!-- Large Live Status & Metric Cards -->
+<div class="metrics-grid">
+    <div class="metric-card" id="card-monitor-status">
+        <div class="metric-label">Network Status</div>
+        <div class="metric-value" id="mon-network-status" style="color: var(--status-normal);">NORMAL</div>
+        <div class="metric-subtext" id="mon-status-subtext">Operating within limit</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Incoming Traffic</div>
+        <div class="metric-value" id="mon-incoming-rate">0.0</div>
+        <div class="metric-subtext">Requests / second</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Processing Rate</div>
+        <div class="metric-value" id="mon-processing-rate">0.0</div>
+        <div class="metric-subtext">Capacity: 20 req/sec</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Priority Queue Length</div>
+        <div class="metric-value" id="mon-queue-len">0</div>
+        <div class="metric-subtext">Capacity: 40 requests</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Average Response Time</div>
+        <div class="metric-value" id="mon-avg-latency">45.0</div>
+        <div class="metric-subtext">Milliseconds (ms)</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Dropped Requests</div>
+        <div class="metric-value" id="mon-dropped-count">0</div>
+        <div class="metric-subtext">Rate-limited / overflow</div>
+    </div>
+</div>
+
+<!-- Traffic Generator Controls Panel -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+            <span>Synthetic Banking Traffic Generator</span>
+        </div>
+        <div style="font-size: 0.85rem; font-family: var(--font-mono); color: var(--text-secondary);">
+            Simulator State: <strong id="sim-state-text" style="color: var(--accent-cyan);">IDLE</strong>
+        </div>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+        Generate synthetic high-frequency banking inquiries (Balance checks, PIN authentications, statement fetches) to observe how the rate limiter and priority queue handle burst loads while preserving core transaction processing.
+    </p>
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <button class="btn btn-success" onclick="startTraffic('LOW')">
+            <i class="fa-solid fa-gauge"></i> LOW (5–10 req/s)
+        </button>
+        <button class="btn btn-warning" onclick="startTraffic('MEDIUM')">
+            <i class="fa-solid fa-gauge-simple-high"></i> MEDIUM (15–25 req/s)
+        </button>
+        <button class="btn btn-orange" onclick="startTraffic('HIGH')">
+            <i class="fa-solid fa-fire"></i> HIGH (40–60 req/s)
+        </button>
+        <button class="btn btn-danger" onclick="startTraffic('EXTREME')">
+            <i class="fa-solid fa-bolt"></i> EXTREME (80–120 req/s)
+        </button>
+
+        <div style="margin-left: auto; display: flex; gap: 10px;">
+            <button class="btn btn-outline" onclick="stopSimulation()">
+                <i class="fa-solid fa-stop"></i> STOP SIMULATION
+            </button>
+            <button class="btn btn-outline" onclick="resetSimulation()">
+                <i class="fa-solid fa-arrows-rotate"></i> RESET COUNTERS
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 4 Live Real-Time Charts (Chart.js) -->
+<div class="charts-grid">
+    <!-- Chart 1: Traffic vs Capacity -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-chart-line" style="color: var(--accent-cyan);"></i>
+                <span>Incoming Traffic vs Processing Capacity</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Cap: 20 req/s</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="chart-traffic-capacity"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Queue Length -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-layer-group" style="color: var(--status-moderate);"></i>
+                <span>Priority Request Queue Length</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Buffer: 40 max</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="chart-queue-length"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 3: Response Latency -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-stopwatch" style="color: #a855f7;"></i>
+                <span>Average Response Time (Latency ms)</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Target &le; 100ms</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="chart-response-time"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 4: Processed vs Dropped Requests -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-shield-virus" style="color: var(--status-critical);"></i>
+                <span>Processed vs Dropped Requests</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Rate Limiter Actions</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+            <canvas id="chart-processed-dropped"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Live Simulation Event Terminal Log -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-terminal" style="color: var(--status-normal);"></i>
+            <span>Live Congestion & Rate Limiting Event Log</span>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">Auto-updating stream</span>
+    </div>
+    <div class="terminal-window" id="terminal-event-log">
+        <div class="terminal-line INFO">
+            <span class="terminal-time">[--:--:--]</span>
+            <span class="terminal-msg">Initializing live socket audit stream...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include dedicated charts script -->
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+
+<script>
+    function startTraffic(level) {
+        fetch('/api/simulation/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level: level })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success && data.error) {
+                alert(data.error);
+            }
+        });
+    }
+
+    function stopSimulation() {
+        fetch('/api/simulation/stop', { method: 'POST' });
+    }
+
+    function resetSimulation() {
+        fetch('/api/simulation/reset', { method: 'POST' });
+    }
+
+    function runFullDemo() {
+        const btn = document.getElementById('btn-run-full-demo');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> RUNNING DEMO...';
+
+        fetch('/api/simulation/full-demo', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success && data.error) {
+                alert(data.error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> RUN FULL DEMO';
+            }
+        });
+    }
+</script>
+{% endblock %}

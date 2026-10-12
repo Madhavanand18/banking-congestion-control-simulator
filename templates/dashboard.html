@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - NexaBank Academic Simulation{% endblock %}
+{% block header_title %}Banking Dashboard & System Overview{% endblock %}
+
+{% block content %}
+<!-- Top Welcome & Account Overview Card -->
+<div class="card" style="background: linear-gradient(135deg, #0e2447, #132f5c); border-color: #244b82;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-cyan); font-weight: 600;">
+                Academic Simulation Account
+            </div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; margin-top: 4px;">
+                Welcome back, {{ user.full_name }}
+            </h1>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-mono);">
+                Account No: <span style="color: #ffffff;">{{ user.account_number }}</span> &bull; Savings Prime
+            </div>
+        </div>
+
+        <div style="text-align: right; background: rgba(7, 13, 25, 0.4); padding: 16px 24px; border-radius: var(--radius-md); border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                Simulated Available Balance
+            </div>
+            <div style="font-size: 2.1rem; font-weight: 800; color: #ffffff; font-family: var(--font-mono); margin-top: 2px;">
+                ₹{{ "{:,.2f}".format(user.balance) }}
+            </div>
+            <div style="font-size: 0.72rem; color: var(--status-normal); display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px;">
+                <i class="fa-solid fa-circle-check"></i> Account Active &bull; Instant Settlement Simulation
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Live Network Metrics Row -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-satellite-dish" style="color: var(--accent-cyan);"></i>
+            <span>Live Application-Level Traffic Metrics</span>
+        </div>
+        <a href="{{ url_for('network_monitor') }}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.78rem;">
+            Full Monitor <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card" id="card-status">
+            <div class="metric-label">Network Status</div>
+            <div class="metric-value" id="dash-network-status" style="font-size: 1.35rem; color: var(--status-normal);">
+                NORMAL
+            </div>
+            <div class="metric-subtext" id="dash-status-subtext">Traffic within processing limit</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Incoming Traffic</div>
+            <div class="metric-value" id="dash-incoming-rate">0.0</div>
+            <div class="metric-subtext">Requests / second</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Processing Rate</div>
+            <div class="metric-value" id="dash-processing-rate">0.0</div>
+            <div class="metric-subtext">Capacity: 20.0 req/sec</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Priority Queue</div>
+            <div class="metric-value" id="dash-queue-len">0</div>
+            <div class="metric-subtext">Max Buffer: 40 requests</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Avg Response Time</div>
+            <div class="metric-value" id="dash-avg-latency">45.0</div>
+            <div class="metric-subtext">Milliseconds (ms)</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Dropped Requests</div>
+            <div class="metric-value" id="dash-dropped-count" style="color: var(--text-secondary);">0</div>
+            <div class="metric-subtext">Load-shed rejection count</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Traffic Simulation Panel -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Recent Transactions Table Card -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-cyan);"></i>
+                <span>Recent Simulated Transactions</span>
+            </div>
+            <a href="{{ url_for('transactions') }}" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.78rem;">
+                View All
+            </a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>TX ID</th>
+                        <th>Type / Recipient</th>
+                        <th>Amount</th>
+                        <th>Latency</th>
+                        <th>Network</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="dash-transactions-body">
+                    {% for tx in recent_txs %}
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-weight: 600; color: var(--accent-cyan);">
+                            {{ tx.tx_id }}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ tx.recipient }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ tx.tx_type }} &bull; {{ tx.timestamp }}</div>
+                        </td>
+                        <td style="font-family: var(--font-mono); font-weight: 600;">
+                            ₹{{ "{:,.2f}".format(tx.amount) }}
+                        </td>
+                        <td style="font-family: var(--font-mono); font-size: 0.8rem;">
+                            {{ tx.processing_time_ms }} ms
+                        </td>
+                        <td>
+                            {% if tx.network_status == 'NORMAL' %}
+                                <span class="badge badge-normal">NORMAL</span>
+                            {% elif tx.network_status == 'MODERATE' %}
+                                <span class="badge badge-moderate">MODERATE</span>
+                            {% elif tx.network_status == 'CONGESTED' %}
+                                <span class="badge badge-congested">CONGESTED</span>
+                            {% else %}
+                                <span class="badge badge-critical">CRITICAL</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if tx.status == 'Completed' %}
+                                <span style="color: var(--status-normal); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Completed</span>
+                            {% elif tx.status == 'Delayed' %}
+                                <span style="color: var(--status-moderate); font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> Delayed</span>
+                            {% elif tx.status == 'Queued' %}
+                                <span style="color: var(--accent-blue); font-weight: 600;"><i class="fa-solid fa-hourglass-half"></i> Queued</span>
+                            {% else %}
+                                <span style="color: var(--status-critical); font-weight: 600;"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Simulator Shortcuts -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-bolt" style="color: var(--accent-cyan);"></i>
+                    <span>Quick Navigation</span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="{{ url_for('transfer') }}" class="btn btn-primary" style="width: 100%;">
+                    <i class="fa-solid fa-paper-plane"></i> Initiate Transfer Request
+                </a>
+                <a href="{{ url_for('network_monitor') }}" class="btn btn-outline" style="width: 100%;">
+                    <i class="fa-solid fa-network-wired"></i> Open Traffic Monitor
+                </a>
+                <a href="{{ url_for('analysis') }}" class="btn btn-outline" style="width: 100%;">
+                    <i class="fa-solid fa-chart-line"></i> View Congestion Analysis
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-sliders" style="color: var(--status-moderate);"></i>
+                    <span>Quick Simulator Load</span>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">
+                Inject synthetic traffic bursts to test queue buffers and rate limiting:
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button class="btn btn-success" onclick="setQuickTraffic('LOW')" style="font-size: 0.78rem; padding: 8px;">
+                    Low (8 req/s)
+                </button>
+                <button class="btn btn-warning" onclick="setQuickTraffic('MEDIUM')" style="font-size: 0.78rem; padding: 8px;">
+                    Medium (22 req/s)
+                </button>
+                <button class="btn btn-orange" onclick="setQuickTraffic('HIGH')" style="font-size: 0.78rem; padding: 8px;">
+                    High (50 req/s)
+                </button>
+                <button class="btn btn-danger" onclick="setQuickTraffic('EXTREME')" style="font-size: 0.78rem; padding: 8px;">
+                    Extreme (95 req/s)
+                </button>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                <button class="btn btn-outline" onclick="stopQuickTraffic()" style="flex: 1; font-size: 0.78rem; padding: 8px;">
+                    <i class="fa-solid fa-stop"></i> Stop Load
+                </button>
+                <button class="btn btn-outline" onclick="resetQuickTraffic()" style="flex: 1; font-size: 0.78rem; padding: 8px;">
+                    <i class="fa-solid fa-arrows-rotate"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setQuickTraffic(level) {
+        fetch('/api/simulation/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level: level })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                console.log('Traffic set to ' + level);
+            }
+        });
+    }
+
+    function stopQuickTraffic() {
+        fetch('/api/simulation/stop', { method: 'POST' });
+    }
+
+    function resetQuickTraffic() {
+        fetch('/api/simulation/reset', { method: 'POST' });
+    }
+</script>
+{% endblock %}

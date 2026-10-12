@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NexaBank - Academic Network Simulation{% endblock %}</title>
+    <!-- Inter & JetBrains Mono Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-section">
+                <a href="{{ url_for('dashboard') }}" class="brand-logo">
+                    <div class="logo-icon">
+                        <i class="fa-solid fa-building-columns"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h1>NexaBank</h1>
+                        <span class="academic-badge"><i class="fa-solid fa-graduation-cap"></i> Academic Simulation</span>
+                    </div>
+                </a>
+            </div>
+
+            <ul class="nav-links">
+                <li class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('dashboard') }}">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'transfer' %}active{% endif %}">
+                    <a href="{{ url_for('transfer') }}">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Transfer Money</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'transactions' %}active{% endif %}">
+                    <a href="{{ url_for('transactions') }}">
+                        <i class="fa-solid fa-receipt"></i>
+                        <span>Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'network_monitor' %}active{% endif %}">
+                    <a href="{{ url_for('network_monitor') }}">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>Network Monitor</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'algorithms' %}active{% endif %}">
+                    <a href="{{ url_for('algorithms') }}">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Algorithms Lab</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'analysis' %}active{% endif %}">
+                    <a href="{{ url_for('analysis') }}">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Congestion Analysis</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-user">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        AS
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">{{ session.get('full_name', 'Alex Student') }}</div>
+                        <div class="user-role">Student Account</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn" title="Sign Out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Topbar Header -->
+            <header class="topbar">
+                <div class="page-title">
+                    <h2>{% block header_title %}Overview{% endblock %}</h2>
+                </div>
+                <div class="topbar-right">
+                    <div class="live-status-pill">
+                        <span id="nav-pulse-dot" class="pulse-dot"></span>
+                        <span id="nav-status-text">NETWORK: NORMAL</span>
+                    </div>
+                    <div class="live-status-pill" style="font-family: var(--font-mono); color: var(--accent-cyan);">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span id="nav-capacity-text">CAP: 20 req/s</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="content-area">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="flash-msg {{ category }}"><i class="fa-solid fa-circle-info"></i> {{ message }}</div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Core Global Network Poller JS -->
+    <script src="{{ url_for('static', filename='js/network.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

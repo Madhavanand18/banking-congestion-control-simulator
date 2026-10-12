@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Congestion Analysis - NexaBank{% endblock %}
+{% block header_title %}Performance Analysis & Comparative Study{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Notice -->
+<div class="card" style="background: rgba(6, 182, 212, 0.06); border-color: rgba(6, 182, 212, 0.3);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <i class="fa-solid fa-flask-vial" style="font-size: 1.8rem; color: var(--accent-cyan);"></i>
+            <div>
+                <h4 style="font-size: 1.05rem; font-weight: 700; color: #ffffff;">Comparative Simulation Experiment</h4>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+                    <strong>Academic Notice:</strong> Simulation Results &mdash; Not real banking infrastructure measurements.
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary);">Test Burst Size:</label>
+            <select id="benchmark-burst-select" class="form-control" style="padding: 6px 12px; font-size: 0.82rem; width: 140px;">
+                <option value="100">100 Requests</option>
+                <option value="150" selected>150 Requests</option>
+                <option value="250">250 Requests</option>
+                <option value="400">400 Requests</option>
+            </select>
+            <button id="btn-re-run-benchmark" class="btn btn-primary" onclick="reRunBenchmark()" style="padding: 8px 16px; font-size: 0.82rem;">
+                <i class="fa-solid fa-play"></i> Re-Run Test
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Side-by-Side Comparison Cards -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- System A: Without Congestion Control -->
+    <div class="card" style="border-top: 4px solid var(--status-critical);">
+        <div class="card-header">
+            <div>
+                <span class="badge badge-critical" style="margin-bottom: 6px;">Unregulated Baseline</span>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #ffffff;">Without Congestion Control</h3>
+            </div>
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.8rem; color: var(--status-critical);"></i>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Unbounded arrival rate with zero rate-limiting or queuing. Requests instantly overwhelm thread pools, causing socket timeouts and massive connection drops.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Total Injected Requests:</span>
+                <strong id="bm-uncontrolled-total" style="font-family: var(--font-mono);">{{ benchmark.without_control.total_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Successful Requests:</span>
+                <strong id="bm-uncontrolled-success" style="font-family: var(--font-mono); color: var(--status-moderate);">{{ benchmark.without_control.successful_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Dropped / Timed Out Requests:</span>
+                <strong id="bm-uncontrolled-dropped" style="font-family: var(--font-mono); color: var(--status-critical);">{{ benchmark.without_control.dropped_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Success Rate:</span>
+                <strong id="bm-uncontrolled-rate" style="font-family: var(--font-mono); color: var(--status-critical);">{{ benchmark.without_control.success_rate_percent }}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Average Response Time:</span>
+                <strong id="bm-uncontrolled-latency" style="font-family: var(--font-mono); color: var(--status-critical);">{{ benchmark.without_control.avg_response_time_ms }} ms</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Maximum Queue Buffer:</span>
+                <strong style="color: var(--text-muted);">N/A (No Buffer - Crashed)</strong>
+            </div>
+        </div>
+
+        <div style="margin-top: 18px; padding: 12px; background: rgba(239, 68, 68, 0.08); border-radius: var(--radius-md); font-size: 0.8rem; color: #fca5a5;">
+            <i class="fa-solid fa-skull"></i> <strong>Failure Mode:</strong> Thread starvation, unbounded latency spikes (&gt;3500ms), and 504 Gateway Timeouts.
+        </div>
+    </div>
+
+    <!-- System B: With Congestion Control -->
+    <div class="card" style="border-top: 4px solid var(--status-normal);">
+        <div class="card-header">
+            <div>
+                <span class="badge badge-normal" style="margin-bottom: 6px;">NexaBank Architecture</span>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #ffffff;">With Congestion Control</h3>
+            </div>
+            <i class="fa-solid fa-shield-halved" style="font-size: 1.8rem; color: var(--status-normal);"></i>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Rate limiter protects server capacity (20 req/s), priority queue buffers surges, and non-critical traffic is smoothly throttled, maintaining predictable response latencies.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Total Injected Requests:</span>
+                <strong id="bm-controlled-total" style="font-family: var(--font-mono);">{{ benchmark.with_control.total_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Successful Requests:</span>
+                <strong id="bm-controlled-success" style="font-family: var(--font-mono); color: var(--status-normal);">{{ benchmark.with_control.successful_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Controlled Load-Shed (HTTP 429):</span>
+                <strong id="bm-controlled-dropped" style="font-family: var(--font-mono); color: var(--status-moderate);">{{ benchmark.with_control.dropped_requests }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Controlled Success Rate:</span>
+                <strong id="bm-controlled-rate" style="font-family: var(--font-mono); color: var(--status-normal);">{{ benchmark.with_control.success_rate_percent }}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <span style="color: var(--text-muted);">Average Response Time:</span>
+                <strong id="bm-controlled-latency" style="font-family: var(--font-mono); color: var(--status-normal);">{{ benchmark.with_control.avg_response_time_ms }} ms</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Maximum Queue Observed:</span>
+                <strong id="bm-controlled-qmax" style="font-family: var(--font-mono); color: var(--accent-cyan);">{{ benchmark.with_control.max_queue_length }} / 40 requests</strong>
+            </div>
+        </div>
+
+        <div style="margin-top: 18px; padding: 12px; background: rgba(16, 185, 129, 0.08); border-radius: var(--radius-md); font-size: 0.8rem; color: #6ee7b7;">
+            <i class="fa-solid fa-circle-check"></i> <strong>Improvement:</strong> Bounded latency, ~{{ benchmark.improvement_summary.latency_reduction_percent }}% latency reduction, and guaranteed priority customer execution.
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Chart -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-chart-column" style="color: var(--accent-cyan);"></i>
+            <span>Visual Benchmark Metrics Comparison</span>
+        </div>
+    </div>
+    <div style="height: 260px; position: relative;">
+        <canvas id="benchmark-chart"></canvas>
+    </div>
+</div>
+
+<!-- Educational Section -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-book-open" style="color: var(--accent-cyan);"></i>
+            <span>Academic Concepts & Educational Explanations</span>
+        </div>
+        <span class="badge badge-normal">College PBL Theory Guide</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; font-size: 0.88rem;">
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-traffic-light"></i> 1. Network Congestion in Banking
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                Network congestion occurs when the volume of incoming transaction requests exceeds the processing capacity of the web servers or database connection pools. During festive sales, salary days, or stock market opens, millions of concurrent users hit banking APIs simultaneously.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-shield-halved"></i> 2. Rate Limiting & Admission Control
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                Rate limiting restricts how many requests are accepted per second. Instead of allowing servers to crash under memory exhaustion, admission control admits manageable traffic (e.g. 20 req/s) and rejects or deflects excess queries with polite HTTP 429 status codes.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-layer-group"></i> 3. Priority Request Queuing
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                A buffer absorbs momentary traffic spikes. Rather than strict FIFO, banking systems use <em>Priority Queuing</em>: financial transfers and card authorizations receive Priority 1, while background balance inquiries receive Priority 2 or 3.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-stopwatch"></i> 4. Latency vs. Throughput
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                <strong>Latency</strong> is the total time (queue wait + processing) taken to return a response to the client. <strong>Throughput</strong> is the number of requests successfully processed per second. Congestion control prevents throughput collapse and bounds maximum latency.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-rotate-right"></i> 5. Request Loss & Timeout/Retry
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                When servers are overwhelmed without congestion control, requests hang indefinitely until client sockets timeout (30+ seconds), triggering aggressive client retries that further compound the crash (the classic "retry storm" problem).
+            </p>
+        </div>
+
+        <div style="background: var(--bg-card-alt); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="color: var(--status-moderate); margin-bottom: 8px; font-weight: 700;">
+                <i class="fa-solid fa-graduation-cap"></i> 6. Application-Level vs. TCP Packet-Level
+            </h4>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                <strong>Crucial distinction for viva:</strong> TCP congestion control (e.g. Reno, Cubic, BBR) operates in the OS kernel at Layer 4, adjusting window sizes for byte packets. NexaBank implements <strong>Application-Level Congestion Control (Layer 7)</strong>, inspecting HTTP transactions, managing worker capacity, and prioritizing high-value banking operations.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let benchmarkChart = null;
+
+    function renderBenchmarkChart(uncontrolled, controlled) {
+        const ctx = document.getElementById('benchmark-chart').getContext('2d');
+        if (benchmarkChart) {
+            benchmarkChart.destroy();
+        }
+
+        benchmarkChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Successful Requests', 'Dropped Requests', 'Avg Latency (ms / 10)'],
+                datasets: [
+                    {
+                        label: 'Without Congestion Control (Unregulated)',
+                        data: [
+                            uncontrolled.successful_requests,
+                            uncontrolled.dropped_requests,
+                            Math.round(uncontrolled.avg_response_time_ms / 10)
+                        ],
+                        backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                        borderColor: '#ef4444',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'With Congestion Control (NexaBank)',
+                        data: [
+                            controlled.successful_requests,
+                            controlled.dropped_requests,
+                            Math.round(controlled.avg_response_time_ms / 10)
+                        ],
+                        backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#94a3b8' }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initial render from server data
+    document.addEventListener('DOMContentLoaded', function() {
+        const initialUncontrolled = {
+            successful_requests: {{ benchmark.without_control.successful_requests }},
+            dropped_requests: {{ benchmark.without_control.dropped_requests }},
+            avg_response_time_ms: {{ benchmark.without_control.avg_response_time_ms }}
+        };
+        const initialControlled = {
+            successful_requests: {{ benchmark.with_control.successful_requests }},
+            dropped_requests: {{ benchmark.with_control.dropped_requests }},
+            avg_response_time_ms: {{ benchmark.with_control.avg_response_time_ms }}
+        };
+        renderBenchmarkChart(initialUncontrolled, initialControlled);
+    });
+
+    async function reRunBenchmark() {
+        const burstSize = document.getElementById('benchmark-burst-select').value;
+        const btn = document.getElementById('btn-re-run-benchmark');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executing...';
+
+        try {
+            const resp = await fetch('/api/analysis/run-benchmark', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ burst_size: burstSize })
+            });
+            const data = await resp.json();
+
+            // Update DOM metrics
+            document.getElementById('bm-uncontrolled-total').textContent = data.without_control.total_requests;
+            document.getElementById('bm-uncontrolled-success').textContent = data.without_control.successful_requests;
+            document.getElementById('bm-uncontrolled-dropped').textContent = data.without_control.dropped_requests;
+            document.getElementById('bm-uncontrolled-rate').textContent = data.without_control.success_rate_percent + '%';
+            document.getElementById('bm-uncontrolled-latency').textContent = data.without_control.avg_response_time_ms + ' ms';
+
+            document.getElementById('bm-controlled-total').textContent = data.with_control.total_requests;
+            document.getElementById('bm-controlled-success').textContent = data.with_control.successful_requests;
+            document.getElementById('bm-controlled-dropped').textContent = data.with_control.dropped_requests;
+            document.getElementById('bm-controlled-rate').textContent = data.with_control.success_rate_percent + '%';
+            document.getElementById('bm-controlled-latency').textContent = data.with_control.avg_response_time_ms + ' ms';
+            document.getElementById('bm-controlled-qmax').textContent = data.with_control.max_queue_length + ' / 40 requests';
+
+            renderBenchmarkChart(data.without_control, data.with_control);
+        } catch (err) {
+            alert('Error running benchmark: ' + err);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Re-Run Test';
+        }
+    }
+</script>
+{% endblock %}

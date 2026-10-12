@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - NexaBank Academic Network Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .login-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 100vw;
+            background: radial-gradient(circle at 50% 20%, #0d1e3d 0%, #070d19 100%);
+            padding: 20px;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+        .login-brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .login-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: var(--radius-md);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #ffffff;
+            margin-bottom: 12px;
+            box-shadow: 0 0 24px var(--accent-glow);
+        }
+        .demo-credentials-box {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px dashed var(--accent-cyan);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-top: 24px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .demo-credentials-box strong {
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="login-icon">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h2 style="font-size: 1.6rem; font-weight: 700;">NexaBank</h2>
+                <span class="academic-badge"><i class="fa-solid fa-graduation-cap"></i> Academic Network Simulation</span>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px;">
+                    Application-Level Congestion Control Demonstration
+                </p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="flash-msg {{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" value="student" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" value="1234" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 13px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+                </button>
+            </form>
+
+            <div class="demo-credentials-box">
+                <div style="font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">
+                    <i class="fa-solid fa-key"></i> Demo Credentials:
+                </div>
+                <div>Username: <strong>student</strong></div>
+                <div>Password: <strong>1234</strong></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+                    *Session-based educational authentication. No real credentials required.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

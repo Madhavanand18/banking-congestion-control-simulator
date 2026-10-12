@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Ledger - NexaBank{% endblock %}
+{% block header_title %}Banking Transaction Ledger & Latency Audit{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-receipt" style="color: var(--accent-cyan);"></i>
+            <span>Simulated Banking Transactions & Congestion Correlation</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Total Records: <strong>{{ transactions|length }}</strong>
+        </div>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+        Every recorded transaction logs the exact server processing latency and network congestion status observed at execution time. Notice how latency rises under congested states but remains bounded due to rate limiting.
+    </p>
+
+    <div class="table-responsive">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Date & Timestamp</th>
+                    <th>Type</th>
+                    <th>Recipient / Destination</th>
+                    <th>Amount</th>
+                    <th>Processing Time</th>
+                    <th>Network Status</th>
+                    <th>Transaction Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);">
+                        {{ tx.tx_id }}
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-secondary); font-family: var(--font-mono);">
+                        {{ tx.timestamp }}
+                    </td>
+                    <td>
+                        <span style="font-weight: 600;">{{ tx.tx_type }}</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ tx.recipient }}</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">{{ tx.account_dest }}</div>
+                    </td>
+                    <td style="font-family: var(--font-mono); font-weight: 700;">
+                        ₹{{ "{:,.2f}".format(tx.amount) }}
+                    </td>
+                    <td style="font-family: var(--font-mono); font-size: 0.85rem;">
+                        <span style="color: {% if tx.processing_time_ms < 100 %}var(--status-normal){% elif tx.processing_time_ms < 400 %}var(--status-moderate){% else %}var(--status-congested){% endif %};">
+                            {{ tx.processing_time_ms }} ms
+                        </span>
+                    </td>
+                    <td>
+                        {% if tx.network_status == 'NORMAL' %}
+                            <span class="badge badge-normal"><i class="fa-solid fa-circle-check"></i> NORMAL</span>
+                        {% elif tx.network_status == 'MODERATE' %}
+                            <span class="badge badge-moderate"><i class="fa-solid fa-circle-exclamation"></i> MODERATE</span>
+                        {% elif tx.network_status == 'CONGESTED' %}
+                            <span class="badge badge-congested"><i class="fa-solid fa-triangle-exclamation"></i> CONGESTED</span>
+                        {% else %}
+                            <span class="badge badge-critical"><i class="fa-solid fa-radiation"></i> CRITICAL</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if tx.status == 'Completed' %}
+                            <span style="color: var(--status-normal); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Completed</span>
+                        {% elif tx.status == 'Delayed' %}
+                            <span style="color: var(--status-moderate); font-weight: 600;"><i class="fa-solid fa-hourglass-half"></i> Delayed</span>
+                        {% elif tx.status == 'Queued' %}
+                            <span style="color: var(--accent-blue); font-weight: 600;"><i class="fa-solid fa-clock"></i> Queued</span>
+                        {% else %}
+                            <span style="color: var(--status-critical); font-weight: 600;"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
